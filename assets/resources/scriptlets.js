@@ -1883,16 +1883,30 @@ builtinScriptlets.push({
         'object-prune.fn',
     ],
 });
+
 function evaldataPrune(
     rawPrunePaths = '',
     rawNeedlePaths = ''
 ) {
-    self.eval = new Proxy(self.eval, {
+    const parseAndPrune = (data, prunePaths, needlePaths) => {
+        try {
+            const parsedData = JSON.parse(data);
+            if (typeof parsedData === 'object') {
+                const prunedData = objectPruneFn(parsedData, prunePaths, needlePaths);
+                return prunedData || parsedData;
+            }
+        } catch (e) {
+            console.error('Failed to parse JSON data:', e);
+        }
+        return data;
+    };
+
+    const originalEval = self.eval;
+    self.eval = new Proxy(originalEval, {
         apply(target, thisArg, args) {
             const before = Reflect.apply(target, thisArg, args);
-            if ( typeof before === 'object' ) {
-                const after = objectPruneFn(before, rawPrunePaths, rawNeedlePaths);
-                return after || before;
+            if (typeof before === 'object' && args.length > 0 && typeof args[0] === 'string') {
+                return parseAndPrune(args[0], rawPrunePaths, rawNeedlePaths);
             }
             return before;
         }
