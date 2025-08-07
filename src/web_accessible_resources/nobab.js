@@ -42,46 +42,103 @@
             'Math',
             'random'
         ],
+        // Additional common anti-adblock tokens
+        [ 'FuckAdBlock', 'onDetected', 'onNotDetected', 'emitEvent', 'options' ],
+        [ 'BlockAdBlock', 'check', 'clearEvent', 'emitEvent' ],
+        [ 'SniffAdBlock', 'on', 'onDetected', 'setOption' ],
+        [ 'adblock', 'bait', 'offsetHeight', 'offsetParent', 'getComputedStyle' ],
     ];
-    const check = function(s) {
+
+    const check = function(source) {
         for ( let i = 0; i < signatures.length; i++ ) {
             const tokens = signatures[i];
             let match = 0;
             for ( let j = 0; j < tokens.length; j++ ) {
                 const token = tokens[j];
                 const pos = token instanceof RegExp
-                    ? s.search(token)
-                    : s.indexOf(token);
+                    ? source.search(token)
+                    : source.indexOf(token);
                 if ( pos !== -1 ) { match += 1; }
             }
             if ( (match / tokens.length) >= 0.8 ) { return true; }
         }
         return false;
     };
-    window.eval = new Proxy(window.eval, {              // jshint ignore: line
+
+    const restorePageVisibility = function() {
+        if ( document.body ) {
+            document.body.style.removeProperty('visibility');
+            document.body.style.removeProperty('opacity');
+            document.body.style.removeProperty('pointer-events');
+        }
+        // Remove common anti-adblock overlays/messages when present
+        let el = document.getElementById('babasbmsgx');
+        if ( el && el.parentNode ) {
+            el.parentNode.removeChild(el);
+        }
+    };
+
+    // Intercept eval
+    window.eval = new Proxy(window.eval, { // jshint ignore: line
         apply: function(target, thisArg, args) {
-            const a = args[0];
-            if ( typeof a !== 'string' || !check(a) ) {
+            const candidate = args[0];
+            if ( typeof candidate !== 'string' || !check(candidate) ) {
                 return target.apply(thisArg, args);
             }
-            if ( document.body ) {
-                document.body.style.removeProperty('visibility');
-            }
-            let el = document.getElementById('babasbmsgx');
-            if ( el ) {
-                el.parentNode.removeChild(el);
-            }
+            restorePageVisibility();
+            // Swallow execution
+            return undefined;
         }
     });
+
+    // Intercept Function constructor and calls
+    window.Function = new Proxy(window.Function, {
+        apply: function(target, thisArg, args) {
+            const body = args.length > 0 ? String(args[args.length - 1]) : '';
+            if ( body && check(body) ) {
+                restorePageVisibility();
+                return function() {};
+            }
+            return target.apply(thisArg, args);
+        },
+        construct: function(target, args) {
+            const body = args.length > 0 ? String(args[args.length - 1]) : '';
+            if ( body && check(body) ) {
+                restorePageVisibility();
+                return function() {};
+            }
+            return new target(...args);
+        }
+    });
+
+    // Intercept setTimeout used with string payloads
     window.setTimeout = new Proxy(window.setTimeout, {
         apply: function(target, thisArg, args) {
-            const a = args[0];
+            const handler = args[0];
             if (
-                typeof a !== 'string' ||
-                /\.bab_elementid.$/.test(a) === false
+                typeof handler !== 'string' ||
+                /.bab_elementid./.test(handler) === false
             ) {
                 return target.apply(thisArg, args);
             }
+            // Swallow timeout used by anti-adblock script
+            restorePageVisibility();
+            return 0;
+        }
+    });
+
+    // Intercept setInterval used with string payloads
+    window.setInterval = new Proxy(window.setInterval, {
+        apply: function(target, thisArg, args) {
+            const handler = args[0];
+            if (
+                typeof handler !== 'string' ||
+                /.bab_elementid./.test(handler) === false
+            ) {
+                return target.apply(thisArg, args);
+            }
+            restorePageVisibility();
+            return 0;
         }
     });
 })();
