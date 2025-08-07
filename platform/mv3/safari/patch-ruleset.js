@@ -45,6 +45,10 @@ export function patchRuleset(ruleset) {
             condition.excludedDomains = condition.excludedInitiatorDomains;
             delete condition.excludedInitiatorDomains;
         }
+        if ( Array.isArray(condition.requestDomains) ) {
+            patchRuleWithRequestDomains(rule, out);
+            continue;
+        }
         out.push(rule);
     }
     return out;
