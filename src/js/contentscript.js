@@ -713,6 +713,29 @@ vAPI.DOMFilterer = class {
     };
     let collapseToken;
 
+    const AD_ANCESTOR_CLASSID_PATTERN = /(\bads?\b|advert|sponsor|promot|ad-?slot|adslot|adunit|adcontainer|gpt)/i;
+    const maybeCollapseAncestors = function(node) {
+        let currentElement = node.parentElement;
+        let depth = 0;
+        while (
+            currentElement &&
+            depth < 3 &&
+            currentElement !== document.body &&
+            currentElement !== document.documentElement
+        ) {
+            const hasSingleChild = currentElement.children.length === 1 && currentElement.firstElementChild === node;
+            const classAndId = `${currentElement.className || ''} ${currentElement.id || ''}`;
+            const hasAdLikeName = AD_ANCESTOR_CLASSID_PATTERN.test(classAndId);
+            const hasMeaningfulText = (currentElement.textContent || '').trim().length > 0;
+            if (hasSingleChild && hasAdLikeName && hasMeaningfulText === false) {
+                currentElement.setAttribute(getCollapseToken(), '');
+            }
+            node = currentElement;
+            currentElement = currentElement.parentElement;
+            depth += 1;
+        }
+    };
+
     // https://github.com/chrisaljoudi/uBlock/issues/174
     //   Do not remove fragment from src URL
     const onProcessed = function(response) {
@@ -756,6 +779,7 @@ vAPI.DOMFilterer = class {
                 continue;
             }
             target.setAttribute(getCollapseToken(), '');
+            maybeCollapseAncestors(target);
             // https://github.com/chrisaljoudi/uBlock/issues/1048
             //   Use attribute to construct CSS rule
             if ( netSelectorCacheCount > netSelectorCacheCountMax ) { continue; }
