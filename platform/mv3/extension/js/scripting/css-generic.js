@@ -49,6 +49,32 @@ let processTimer;
 let domChangeTimer;
 let lastDomChange = Date.now();
 
+// Heuristic: collapse ad-like containers without relying on filter lists
+const ADLIKE_RE = /(\bads?\b|advert|sponsor|promot|ad[-_ ]?(slot|unit|container)|gpt|adsense|adfox|adzerk)/i;
+let hideAttrRuleAdded = false;
+const HIDE_ATTR_NAME = 'data-ubol-hide';
+const ensureHideAttrCSS = ( ) => {
+    if ( hideAttrRuleAdded ) { return; }
+    hideAttrRuleAdded = true;
+    // Queue the attribute selector for the next CSS injection batch
+    styleSheetSelectors.push(`[${HIDE_ATTR_NAME}]`);
+};
+const maybeHideAdLike = node => {
+    if ( node === document.body || node === document.documentElement ) { return; }
+    if ( node.nodeType !== 1 ) { return; }
+    const role = node.getAttribute('role');
+    const aria = node.getAttribute('aria-label') || node.getAttribute('aria-labelledby') || '';
+    const classAndId = `${node.getAttribute('class') || ''} ${node.id || ''}`;
+    const hasAdName = ADLIKE_RE.test(classAndId) || (role === 'advertisement') || (/advert/i.test(aria));
+    if ( hasAdName === false ) { return; }
+    const hasMeaningfulText = (node.textContent || '').trim().length > 0;
+    const hasSingleChild = node.children && node.children.length <= 1;
+    if ( hasSingleChild && hasMeaningfulText === false ) {
+        node.setAttribute(HIDE_ATTR_NAME, '');
+        ensureHideAttrCSS();
+    }
+};
+
 /******************************************************************************/
 
 // http://www.cse.yorku.ca/~oz/hash.html#djb2
@@ -170,6 +196,7 @@ const uBOL_processNodes = ( ) => {
         for ( const node of nodes ) {
             uBOL_idFromNode(node, styleSheetSelectors);
             uBOL_classesFromNode(node, styleSheetSelectors);
+            maybeHideAdLike(node);
         }
         nodes.length = 0;
         if ( performance.now() >= deadline ) { break; }
