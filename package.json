@@ -2,11 +2,14 @@
   "name": "uBlock",
   "version": "1.0.0",
   "description": "npm dev tools",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "lint": "eslint --no-warn-ignored --ignore-pattern \"**/lib/\" --ignore-pattern \"**/npm/\" -- \"./src/js/*.js\" \"./src/js/**/*.js\" \"./**/*.json\" \"./platform/**/*.js\"",
     "lint:fix": "eslint --fix --no-warn-ignored --ignore-pattern \"**/lib/\" --ignore-pattern \"**/npm/\" -- \"./src/js/*.js\" \"./src/js/**/*.js\" \"./**/*.json\" \"./platform/**/*.js\"",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test"
   },
   "repository": {
     "type": "git",
@@ -28,6 +31,7 @@
     "@eslint/json": "^0.13.1",
     "eslint": "^9.17.0",
     "eslint-formatter-compact": "^8.40.0",
-    "globals": "^15.14.0"
+    "globals": "^15.14.0",
+    "prettier": "^3.3.3"
   }
 }

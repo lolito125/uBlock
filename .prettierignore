@@ -1,0 +1,6 @@
+node_modules/
+dist/
+platform/**/lib/
+src/lib/
+.tmp/
+.tmp/**
