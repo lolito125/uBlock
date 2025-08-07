@@ -13,7 +13,7 @@ mv3-sources := \
 	$(wildcard platform/mv3/*) \
 	$(shell find ./platform/mv3/extension -name codemirror-ubol -prune -o -type f) \
 	platform/mv3/extension/lib/codemirror/codemirror-ubol/dist/cm6.bundle.ubol.min.js
-mv3-data := $(shell find ./dist/build/mv3-data -type f)
+mv3-data := $(shell find ./dist/build/mv3-data -type f 2>/dev/null)
 
 mv3-edge-deps := $(wildcard platform/mv3/edge/*)
 mv3-safari-deps := $(wildcard platform/mv3/safari/*)
